@@ -1,6 +1,7 @@
 package com.example.tictactoe
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -26,7 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Surface
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -60,8 +63,9 @@ class MainActivity : ComponentActivity() {
 fun GameBoard(
     currentPlayer: Char,
     gameBoard: Array<Array<Char>>,
+    winnerPlayer: MutableState<Int>,
     onCellClick: (row: Int, column: Int) -> Unit
-) {
+    ) {
     Box(
         modifier = Modifier
             .size(280.dp)
@@ -91,6 +95,7 @@ fun GameBoard(
                 start = Offset(x = 0f, y = size.height * 2 / 3),
                 end = Offset(x = size.width, y = size.height * 2 / 3)
             )
+
         }
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -100,10 +105,40 @@ fun GameBoard(
             gameBoard.forEachIndexed { rowIndex, row ->
                 Row {
                     row.forEachIndexed { columnIndex, cell ->
-                        Cell(cell, rowIndex, columnIndex, onCellClick)
+                        Cell(cell, rowIndex, columnIndex, onCellClick, gameBoard)
                     }
                 }
             }
+        }
+
+        if(gameBoard[0][0] != ' ' && gameBoard[0][0] == gameBoard[0][1] && gameBoard[0][1] == gameBoard[0][2]){
+            RedLine(0f, 1f, 1/6f, 1/6f)
+            if(gameBoard[0][2] == 'X') {
+                winnerPlayer.value = 1
+            }else {
+                winnerPlayer.value = 2
+            }
+        }
+        if(gameBoard[1][0] != ' ' && gameBoard[1][0] == gameBoard[1][1] && gameBoard[1][1] == gameBoard[1][2]){
+            RedLine(0f, 1f, 1/2f, 1/2f)
+        }
+        if(gameBoard[2][0] != ' ' && gameBoard[2][0] == gameBoard[2][1] && gameBoard[2][1] == gameBoard[2][2]){
+            RedLine(0f, 1f, 5/6f, 5/6f)
+        }
+        if(gameBoard[0][0] != ' ' && gameBoard[0][0] == gameBoard[1][0] && gameBoard[1][0] == gameBoard[2][0]){
+            RedLine(1/6f, 1/6f, 0f, 1f)
+        }
+        if(gameBoard[0][1] != ' ' && gameBoard[0][1] == gameBoard[1][1] && gameBoard[1][1] == gameBoard[2][1]){
+            RedLine(1/2f, 1/2f, 0f, 1f)
+        }
+        if(gameBoard[0][2] != ' ' && gameBoard[0][2] == gameBoard[1][2] && gameBoard[1][2] == gameBoard[2][2]){
+            RedLine(5/6f, 5/6f, 0f, 1f)
+        }
+        if(gameBoard[0][0] != ' ' && gameBoard[0][0] == gameBoard[1][1] && gameBoard[1][1] == gameBoard[2][2]){
+            RedLine(0f, 1f, 0f, 1f)
+        }
+        if(gameBoard[0][2] != ' ' && gameBoard[0][2] == gameBoard[1][1] && gameBoard[1][1] == gameBoard[2][0]){
+            RedLine(1f, 0f, 0f, 1f)
         }
     }
 }
@@ -113,7 +148,8 @@ fun Cell(
     cellValue: Char,
     rowIndex: Int,
     columnIndex: Int,
-    onCellClick: (row: Int, column: Int) -> Unit
+    onCellClick: (row: Int, column: Int) -> Unit,
+    gameBoard: Array<Array<Char>>
 ) {
     Box(
         modifier = Modifier
@@ -129,6 +165,18 @@ fun Cell(
             'O' -> O()
             'X' -> X()
         }
+    }
+}
+
+@Composable
+fun RedLine(x1: Float, x2: Float, y1 : Float, y2:Float) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        drawLine(
+            color = Color.Red,
+            strokeWidth = 10f,
+            start = Offset(x = size.width * x1, y = size.height * y1),
+            end = Offset(x = size.width * x2, y = size.height * y2)
+        )
     }
 }
 
@@ -172,6 +220,10 @@ fun X() {
 fun MainScreen() {
     var currentPlayer by remember { mutableStateOf('O') }
     var gameBoard by remember { mutableStateOf(Array(3) { Array(3) { ' ' } }) }
+    var playerOScore = remember { mutableIntStateOf(0) }
+    var playerXScore = remember { mutableIntStateOf(0) }
+    var winnerPlayer = remember { mutableIntStateOf(0) }
+    var playedSet = 0
 
     Column(
         modifier = Modifier
@@ -185,9 +237,9 @@ fun MainScreen() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Player 'O': 0", fontSize = 17.sp)
+            Text(text = "Player 'O': ${playerOScore.intValue}", fontSize = 17.sp)
             Text(text = "Draw: 0", fontSize = 17.sp)
-            Text(text = "Player 'X': 0", fontSize = 17.sp)
+            Text(text = "Player 'X': ${playerXScore.intValue}", fontSize = 17.sp)
         }
         Text(
             text = "Tic Tac Toe",
@@ -205,7 +257,8 @@ fun MainScreen() {
         ) {
             GameBoard(
                 currentPlayer = currentPlayer,
-                gameBoard = gameBoard
+                gameBoard = gameBoard,
+                winnerPlayer,
             ) { row, column ->
                 if (gameBoard[row][column] == ' ') {
                     gameBoard[row][column] = currentPlayer
@@ -219,7 +272,7 @@ fun MainScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Player 'O' turn",
+                text = "Player '$currentPlayer' turn",
                 fontSize = 20.sp,
             )
             Button(
