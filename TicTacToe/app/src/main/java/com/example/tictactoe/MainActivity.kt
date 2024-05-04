@@ -63,7 +63,6 @@ class MainActivity : ComponentActivity() {
 fun GameBoard(
     currentPlayer: Char,
     gameBoard: Array<Array<Char>>,
-    winnerPlayer: MutableState<Int>,
     onCellClick: (row: Int, column: Int) -> Unit
     ) {
     Box(
@@ -113,11 +112,6 @@ fun GameBoard(
 
         if(gameBoard[0][0] != ' ' && gameBoard[0][0] == gameBoard[0][1] && gameBoard[0][1] == gameBoard[0][2]){
             RedLine(0f, 1f, 1/6f, 1/6f)
-            if(gameBoard[0][2] == 'X') {
-                winnerPlayer.value = 1
-            }else {
-                winnerPlayer.value = 2
-            }
         }
         if(gameBoard[1][0] != ' ' && gameBoard[1][0] == gameBoard[1][1] && gameBoard[1][1] == gameBoard[1][2]){
             RedLine(0f, 1f, 1/2f, 1/2f)
@@ -218,12 +212,11 @@ fun X() {
 
 @Composable
 fun MainScreen() {
-    var currentPlayer by remember { mutableStateOf('O') }
+    var currentPlayer by remember { mutableStateOf('X') }
     var gameBoard by remember { mutableStateOf(Array(3) { Array(3) { ' ' } }) }
     var playerOScore = remember { mutableIntStateOf(0) }
     var playerXScore = remember { mutableIntStateOf(0) }
-    var winnerPlayer = remember { mutableIntStateOf(0) }
-    var playedSet = 0
+    var drawCount = remember { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -238,7 +231,7 @@ fun MainScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(text = "Player 'O': ${playerOScore.intValue}", fontSize = 17.sp)
-            Text(text = "Draw: 0", fontSize = 17.sp)
+            Text(text = "Draw: ${drawCount.intValue}", fontSize = 17.sp)
             Text(text = "Player 'X': ${playerXScore.intValue}", fontSize = 17.sp)
         }
         Text(
@@ -258,11 +251,22 @@ fun MainScreen() {
             GameBoard(
                 currentPlayer = currentPlayer,
                 gameBoard = gameBoard,
-                winnerPlayer,
             ) { row, column ->
                 if (gameBoard[row][column] == ' ') {
                     gameBoard[row][column] = currentPlayer
                     currentPlayer = if (currentPlayer == 'O') 'X' else 'O'
+
+                    val winner = checkGameFinish(gameBoard)
+                    if (winner != null) {
+                        when (winner) {
+                            'O' -> playerOScore.intValue++
+                            'X' -> playerXScore.intValue++
+                            'D' -> drawCount.intValue++
+                        }
+                        // Display winner or draw
+                        // Update draw count if it's a draw
+                        // Reset game board
+                    }
                 }
             }
         }
@@ -291,4 +295,32 @@ fun MainScreen() {
         }
     }
 }
+
+fun checkGameFinish(gameBoard: Array<Array<Char>>): Char? {
+    for (row in gameBoard) {
+        if (row[0] != ' ' && row[0] == row[1] && row[1] == row[2]) {
+            return row[0]
+        }
+    }
+    for (col in 0 until 3) {
+        if (gameBoard[0][col] != ' ' && gameBoard[0][col] == gameBoard[1][col] && gameBoard[1][col] == gameBoard[2][col]) {
+            return gameBoard[0][col]
+        }
+    }
+    if (gameBoard[0][0] != ' ' && gameBoard[0][0] == gameBoard[1][1] && gameBoard[1][1] == gameBoard[2][2]) {
+        return gameBoard[0][0]
+    }
+    if (gameBoard[0][2] != ' ' && gameBoard[0][2] == gameBoard[1][1] && gameBoard[1][1] == gameBoard[2][0]) {
+        return gameBoard[0][2]
+    }
+    for (row in gameBoard) {
+        for (cell in row) {
+            if (cell == ' ') {
+                return null
+            }
+        }
+    }
+    return 'D'
+}
+
 
