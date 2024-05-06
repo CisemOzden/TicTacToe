@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +40,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -63,6 +65,7 @@ class MainActivity : ComponentActivity() {
 fun GameBoard(
     currentPlayer: Char,
     gameBoard: Array<Array<Char>>,
+    gameOver: Boolean,
     onCellClick: (row: Int, column: Int) -> Unit
     ) {
     Box(
@@ -104,7 +107,7 @@ fun GameBoard(
             gameBoard.forEachIndexed { rowIndex, row ->
                 Row {
                     row.forEachIndexed { columnIndex, cell ->
-                        Cell(cell, rowIndex, columnIndex, onCellClick, gameBoard)
+                        Cell(cell, rowIndex, columnIndex, onCellClick, gameBoard, gameOver)
                     }
                 }
             }
@@ -143,14 +146,17 @@ fun Cell(
     rowIndex: Int,
     columnIndex: Int,
     onCellClick: (row: Int, column: Int) -> Unit,
-    gameBoard: Array<Array<Char>>
+    gameBoard: Array<Array<Char>>,
+    gameOver: Boolean
 ) {
     Box(
         modifier = Modifier
             .size(90.dp)
             .padding(5.dp)
             .clickable {
-                onCellClick(rowIndex, columnIndex)
+                if (!gameOver && gameBoard[rowIndex][columnIndex] == ' ') {
+                    onCellClick(rowIndex, columnIndex)
+                }
             }
             .background(Color(180, 180, 180)),
         contentAlignment = Alignment.Center
@@ -217,6 +223,9 @@ fun MainScreen() {
     var playerOScore = remember { mutableIntStateOf(0) }
     var playerXScore = remember { mutableIntStateOf(0) }
     var drawCount = remember { mutableIntStateOf(0) }
+    var gameResultMessage = remember { mutableStateOf("") }
+    var gameOver by remember { mutableStateOf(false) }
+
 
     Column(
         modifier = Modifier
@@ -251,21 +260,28 @@ fun MainScreen() {
             GameBoard(
                 currentPlayer = currentPlayer,
                 gameBoard = gameBoard,
+                gameOver = gameOver,
             ) { row, column ->
                 if (gameBoard[row][column] == ' ') {
                     gameBoard[row][column] = currentPlayer
                     currentPlayer = if (currentPlayer == 'O') 'X' else 'O'
-
                     val winner = checkGameFinish(gameBoard)
                     if (winner != null) {
+                        gameOver = true
                         when (winner) {
-                            'O' -> playerOScore.intValue++
-                            'X' -> playerXScore.intValue++
-                            'D' -> drawCount.intValue++
+                            'O' -> {
+                                playerOScore.intValue++
+                                gameResultMessage.value = "Player O Wins!"
+                            }
+                            'X' -> {
+                                playerXScore.intValue++
+                                gameResultMessage.value = "Player X Wins!"
+                            }
+                            'D' -> {
+                                drawCount.intValue++
+                                gameResultMessage.value = "Draw!"
+                            }
                         }
-                        // Display winner or draw
-                        // Update draw count if it's a draw
-                        // Reset game board
                     }
                 }
             }
@@ -280,7 +296,12 @@ fun MainScreen() {
                 fontSize = 20.sp,
             )
             Button(
-                onClick = { },
+                onClick = {
+                    gameBoard = Array(3) { Array(3) { ' ' } }
+                    gameResultMessage.value = ""
+                    currentPlayer = 'X'
+                    gameOver = false
+                          },
                 shape = RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = Color(30,30,30)
@@ -293,6 +314,22 @@ fun MainScreen() {
                 )
             }
         }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = gameResultMessage.value,
+            fontSize = 36.sp,
+            color = Color.Blue,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.offset(y = 50.dp)
+        )
     }
 }
 
@@ -322,5 +359,4 @@ fun checkGameFinish(gameBoard: Array<Array<Char>>): Char? {
     }
     return 'D'
 }
-
 
